@@ -17,15 +17,16 @@ type Server struct {
 //	    {"http://127.0.0.1:3000"},
 //	}
 var (
-	backends      []Server
-	count_request uint64
-	mu            sync.RWMutex
+	backends          []*Server
+	count_request     uint64
+	ActiveConnections int64
+	mu                sync.RWMutex
 )
 
 func AddBackends(url string) {
 	mu.Lock()
 	defer mu.Unlock()
-	backends = append(backends, Server{IP: url})
+	backends = append(backends, &Server{IP: url})
 }
 
 func RemoveBackends(url string) {
@@ -47,10 +48,13 @@ func getNextBackend() Server {
 		return Server{}
 	}
 	next := atomic.AddUint64(&count_request, 1)
-	return backends[(uint64(next)-1)%uint64(sz_of_backend)]
+	return *backends[(uint64(next)-1)%uint64(sz_of_backend)]
 }
 
 func Load_Balancer(w http.ResponseWriter, r *http.Request) {
+	atomic.AddInt64(&ActiveConnections, 1)
+	defer atomic.AddInt64(&ActiveConnections, -1)
+
 	targetUrl := getNextBackend()
 	if targetUrl.IP == "" {
 		http.Error(w, "No backends available", http.StatusServiceUnavailable)
@@ -65,4 +69,11 @@ func Load_Balancer(w http.ResponseWriter, r *http.Request) {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	r.Host = target.Host
 	proxy.ServeHTTP(w, r)
+}
+
+func GetStatusData() (int64, []*Server) {
+	mu.RLock()
+	defer mu.RUnlock()
+	// Return a copy or the slice itself for the template to iterate
+	return atomic.LoadInt64(&ActiveConnections), (backends)
 }
