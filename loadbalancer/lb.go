@@ -8,18 +8,24 @@ import (
 	"sync/atomic"
 )
 
-type servers struct {
+type Server struct {
 	IP string
 }
 
-var backend []servers
+var backends []Server
 
 var count_request uint64
 
-func getNextBackend() servers {
-	sz_of_backend := len(backend)
+func AddBackends(urls []string) {
+	for _, u := range urls {
+		backends = append(backends, Server{IP: u})
+	}
+}
+
+func getNextBackend() Server {
+	sz_of_backend := len(backends)
 	next := atomic.AddUint64(&count_request, 1)
-	return backend[(uint64(next)-1)%uint64(sz_of_backend)]
+	return backends[(uint64(next)-1)%uint64(sz_of_backend)]
 }
 
 func Load_Balancer(w http.ResponseWriter, r *http.Request) {
