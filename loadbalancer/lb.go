@@ -13,6 +13,7 @@ import (
 type Server struct {
 	IP      string
 	Healthy bool
+	Count   uint64
 }
 
 //	var backends = []Server{
@@ -58,7 +59,9 @@ func getNextBackend() Server {
 		return Server{}
 	}
 	next := atomic.AddUint64(&count_request, 1)
-	return *healthy_backends[(uint64(next)-1)%uint64(sz_of_backend)]
+	selected := healthy_backends[(uint64(next)-1)%uint64(sz_of_backend)]
+	atomic.AddUint64(&selected.Count, 1)
+	return *selected
 }
 
 func Load_Balancer(w http.ResponseWriter, r *http.Request) {
