@@ -1,0 +1,4 @@
+cluster:
+  min_replicas: 3
+  max_replicas: 10
+  starting_port: 4000
