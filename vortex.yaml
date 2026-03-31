@@ -3,5 +3,5 @@ cluster:
   max_replicas: 5
   starting_port: 3000
 settings:
-  scaleupnumber: 10
+  scaleupnumber: 5
   scaledownnumber: 2
