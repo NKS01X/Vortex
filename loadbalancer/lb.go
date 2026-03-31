@@ -12,14 +12,14 @@ type Server struct {
 	IP string
 }
 
-var backends []Server
+var backends = []Server{
+	{"http://127.0.0.1:3000"},
+}
 
 var count_request uint64
 
-func AddBackends(urls []string) {
-	for _, u := range urls {
-		backends = append(backends, Server{IP: u})
-	}
+func AddBackends(url string) {
+	backends = append(backends, Server{IP: url})
 }
 
 func getNextBackend() Server {
@@ -30,7 +30,7 @@ func getNextBackend() Server {
 
 func Load_Balancer(w http.ResponseWriter, r *http.Request) {
 	targetUrl := getNextBackend()
-	fmt.Printf("Routing the reponse to = %s\n", targetUrl)
+	fmt.Printf("Routing the reponse to = %s\n", targetUrl.IP)
 	target, err := url.Parse(targetUrl.IP)
 	if err != nil {
 		http.Error(w, "Server Error", http.StatusInternalServerError)
