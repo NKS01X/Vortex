@@ -2,16 +2,40 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"vortex/demon"
 	"vortex/loadbalancer"
 
 	"github.com/gin-gonic/gin"
+	"gopkg.in/yaml.v3"
 )
+
+type VortexConfig struct {
+	Cluster struct {
+		MinReplicas  int `yaml:"min_replicas"`
+		MaxReplicas  int `yaml:"max_replicas"`
+		StartingPort int `yaml:"starting_port"`
+	} `yaml:"cluster"`
+}
+
+func ParseYamlFile() {
+	yamlFile, err := os.ReadFile("vortex.yaml")
+	if err != nil {
+		fmt.Printf("Fatal error: Could not find vortex.yaml: %v\n", err)
+		return
+	}
+	var config VortexConfig
+	yaml.Unmarshal(yamlFile, &config)
+	fmt.Printf("Config loaded! Starting Port: %d, Initial Nodes: %d\n", config.Cluster.StartingPort, config.Cluster.MinReplicas)
+	fmt.Println("========================================")
+	demon.SetConfig(config.Cluster.StartingPort)
+	demon.AddServers(config.Cluster.MinReplicas)
+}
 
 func test() {
 	fmt.Println("========================================")
-	fmt.Println("🌀 Vortex: Initializing cluster...")
+	fmt.Println(" Vortex: Initializing cluster...")
 	fmt.Println("========================================")
 
 	// 1. Initial Scale-up (Start all 4 servers here!)
@@ -41,4 +65,5 @@ func test() {
 
 func main() {
 	// test()
+	ParseYamlFile()
 }
