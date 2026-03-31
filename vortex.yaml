@@ -1,4 +1,7 @@
 cluster:
-  min_replicas: 3
-  max_replicas: 10
-  starting_port: 4000
+  min_replicas: 2
+  max_replicas: 5
+  starting_port: 3000
+settings:
+  scaleupnumber: 10
+  scaledownnumber: 2
