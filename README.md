@@ -67,7 +67,7 @@ graph TD
 ### Prerequisites
 * Go 1.20 or newer installed on your machine.
 
-### Installation
+### Installation (Local)
 
 1. **Clone the repository:**
    ```bash
@@ -87,6 +87,20 @@ graph TD
    go run main.go
    ```
    > You will see the Load Balancer spinning up on port `:8000` and backend nodes starting sequentially from `:3000` (or as configured).
+
+### Production Ready (Docker)
+
+To make Vortex production-ready, it comes with a `Dockerfile` and a `Makefile` to seamlessly build into an isolated container.
+
+Build and run in one step using **Make**:
+```bash
+make docker-run
+```
+Alternatively, build manually using Docker:
+```bash
+docker build -t vortex-lb:latest .
+docker run -p 8000:8000 --rm vortex-lb:latest
+```
 
 ### Testing the Load Balancer
 
