@@ -58,6 +58,10 @@ func InsertServer(Url string) {
 	lb.AddBackends(Url)
 }
 
+func DeleteServer(Url string) {
+	lb.RemoveBackends(Url)
+}
+
 func StartServer(port int) {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -78,21 +82,30 @@ func AddServers(x int) {
 	InitialPort += x
 }
 
-// func RemoveServers(x int) {
-// 	for i := 0; i < x; i++ {
-// 	}
-// }
+func RemoveServers(x int) {
+	for i := 0; i < x; i++ {
+		InitialPort--
+		Url := fmt.Sprintf("%s%d", InitialUrl, InitialPort)
+		DeleteServer(Url)
+		fmt.Printf("[Demon] Removed backend from pool: %s\n", Url)
+	}
+}
 
 var CurrentServers uint64 = 0
 
 func Demon() {
-	// r := gin.Default()
-	// go r.GET("/", func(c *gin.Context) {
-	// 	CurrentServers++
-	// 	if(CurrentServers >= uint64(config.Settings.Scaleupnumber)) {
-	// 		AddServers(1)
-	// 	}else if(CurrentServers <= uint64(config.Settings.Scaledownnumber)) {
-
-	// 	}
-	// })
+	r := gin.Default()
+	go r.GET("/", func(c *gin.Context) {
+		CurrentServers++
+		if CurrentServers >= uint64(config.Settings.Scaleupnumber) {
+			if CurrentServers < uint64(config.Cluster.MaxReplicas) {
+				AddServers(1)
+			}
+		} else if CurrentServers <= uint64(config.Settings.Scaledownnumber) {
+			// RemoveServers(1)
+			if CurrentServers > uint64(config.Cluster.MinReplicas) {
+				RemoveServers(1)
+			}
+		}
+	})
 }

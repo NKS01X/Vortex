@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sync"
 	"sync/atomic"
 )
 
@@ -13,25 +14,48 @@ type Server struct {
 }
 
 //	var backends = []Server{
-//		{"http://127.0.0.1:3000"},
+//	    {"http://127.0.0.1:3000"},
 //	}
 var (
 	backends      []Server
 	count_request uint64
+	mu            sync.RWMutex
 )
 
 func AddBackends(url string) {
+	mu.Lock()
+	defer mu.Unlock()
 	backends = append(backends, Server{IP: url})
 }
 
+func RemoveBackends(url string) {
+	mu.Lock()
+	defer mu.Unlock()
+	for i, server := range backends {
+		if server.IP == url {
+			backends = append(backends[:i], backends[i+1:]...)
+			break
+		}
+	}
+}
+
 func getNextBackend() Server {
+	mu.RLock()
+	defer mu.RUnlock()
 	sz_of_backend := len(backends)
+	if sz_of_backend == 0 {
+		return Server{}
+	}
 	next := atomic.AddUint64(&count_request, 1)
 	return backends[(uint64(next)-1)%uint64(sz_of_backend)]
 }
 
 func Load_Balancer(w http.ResponseWriter, r *http.Request) {
 	targetUrl := getNextBackend()
+	if targetUrl.IP == "" {
+		http.Error(w, "No backends available", http.StatusServiceUnavailable)
+		return
+	}
 	fmt.Printf("Routing the reponse to = %s\n", targetUrl.IP)
 	target, err := url.Parse(targetUrl.IP)
 	if err != nil {
