@@ -7,10 +7,12 @@ import (
 	"net/url"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Server struct {
-	IP string
+	IP      string
+	Healthy bool
 }
 
 //	var backends = []Server{
@@ -26,7 +28,7 @@ var (
 func AddBackends(url string) {
 	mu.Lock()
 	defer mu.Unlock()
-	backends = append(backends, &Server{IP: url})
+	backends = append(backends, &Server{IP: url, Healthy: true})
 }
 
 func RemoveBackends(url string) {
@@ -43,12 +45,20 @@ func RemoveBackends(url string) {
 func getNextBackend() Server {
 	mu.RLock()
 	defer mu.RUnlock()
-	sz_of_backend := len(backends)
+
+	var healthy_backends []*Server
+	for _, server := range backends {
+		if server.Healthy {
+			healthy_backends = append(healthy_backends, server)
+		}
+	}
+
+	sz_of_backend := len(healthy_backends)
 	if sz_of_backend == 0 {
 		return Server{}
 	}
 	next := atomic.AddUint64(&count_request, 1)
-	return *backends[(uint64(next)-1)%uint64(sz_of_backend)]
+	return *healthy_backends[(uint64(next)-1)%uint64(sz_of_backend)]
 }
 
 func Load_Balancer(w http.ResponseWriter, r *http.Request) {
@@ -74,6 +84,37 @@ func Load_Balancer(w http.ResponseWriter, r *http.Request) {
 func GetStatusData() (int64, []*Server) {
 	mu.RLock()
 	defer mu.RUnlock()
-	// Return a copy or the slice itself for the template to iterate
-	return atomic.LoadInt64(&ActiveConnections), (backends)
+	return atomic.LoadInt64(&ActiveConnections), backends
+}
+
+func StartHealthCheck() {
+	for {
+		time.Sleep(10 * time.Second)
+		mu.RLock()
+		servers := make([]*Server, len(backends))
+		copy(servers, backends)
+		mu.RUnlock()
+
+		for _, server := range servers {
+			go check_health(server)
+		}
+	}
+}
+
+func check_health(server *Server) {
+	client := http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Get(server.IP)
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if err != nil || resp.StatusCode >= 500 {
+		server.Healthy = false
+	} else {
+		server.Healthy = true
+	}
+
+	if resp != nil {
+		resp.Body.Close()
+	}
 }
