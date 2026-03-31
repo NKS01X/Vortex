@@ -12,11 +12,13 @@ type Server struct {
 	IP string
 }
 
-var backends = []Server{
-	{"http://127.0.0.1:3000"},
-}
-
-var count_request uint64
+//	var backends = []Server{
+//		{"http://127.0.0.1:3000"},
+//	}
+var (
+	backends      []Server
+	count_request uint64
+)
 
 func AddBackends(url string) {
 	backends = append(backends, Server{IP: url})
