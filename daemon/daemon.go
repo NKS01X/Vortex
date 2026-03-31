@@ -1,4 +1,4 @@
-package demon
+package daemon
 
 import (
 	"context"
@@ -96,7 +96,7 @@ func AddServers(x int) {
 		Url := fmt.Sprintf("%s%d", InitialUrl, InitialPort+i)
 		InsertServer(Url)
 		go StartServer(InitialPort+i, Url)
-		fmt.Printf("[Demon] Added new backend to pool: %s\n", Url)
+		fmt.Printf("[daemon] Added new backend to pool: %s\n", Url)
 	}
 	InitialPort += x
 	CurrentServers += uint64(x)
@@ -115,14 +115,14 @@ func RemoveServers(x int) {
 			delete(activeServers, Url)
 		}
 
-		fmt.Printf("[Demon] Removed backend from pool: %s\n", Url)
+		fmt.Printf("[daemon] Removed backend from pool: %s\n", Url)
 	}
 	CurrentServers -= uint64(x)
 }
 
 var CurrentServers uint64 = 0
 
-func Demon() {
+func Daemon() {
 	for {
 		activeReqs := atomic.LoadInt64(&lb.ActiveConnections)
 
