@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"html/template"
 
-	"vortex/demon"
+	"vortex/daemon"
 	"vortex/loadbalancer"
 
 	"github.com/gin-gonic/gin"
@@ -16,8 +16,8 @@ import (
 //     fmt.Println("========================================")
 
 //     // 1. Initial Scale-up (Start all 4 servers here!)
-//     demon.AddServers(1)
-//     demon.AddServers(3)
+//     daemon.AddServers(1)
+//     daemon.AddServers(3)
 
 //     // 2. THE PAUSE
 //     fmt.Println("Waiting for backend nodes to warm up...")
@@ -106,9 +106,9 @@ func DashboardHandler(c *gin.Context) {
 
 func main() {
 	// test()
-	demon.ParseYamlFile()
+	daemon.ParseYamlFile()
 
-	go demon.Demon()
+	go daemon.Daemon()
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
