@@ -25,6 +25,10 @@ type VortexConfig struct {
 		Scaleupnumber   int `yaml:"scaleupnumber"`
 		Scaledownnumber int `yaml:"scaledownnumber"`
 	} `yaml:"settings"`
+	RateLimiter struct {
+		RateLimit  int           `yaml:"ratelimit"`
+		RateWindow time.Duration `yaml:"ratewindow"`
+	} `yaml:"ratelimiter"`
 }
 
 var (
@@ -74,7 +78,10 @@ func StartServer(port int, url string) {
 	gin.SetMode(gin.ReleaseMode)
 	go ratelim.CleanupStaleVisitors() // cleans the users from the map who's time window has expired
 	r := gin.New()
-	r.Use(ratelim.CustomRateLimiter())
+	/*
+	 * fetched RateLimit and RateWindow from yaml
+	 */
+	r.Use(ratelim.CustomRateLimiter(config.RateLimiter.RateLimit, config.RateLimiter.RateWindow))
 	r.GET("/", func(c *gin.Context) {
 		// for test
 		time.Sleep(2 * time.Second)

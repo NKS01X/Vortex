@@ -5,3 +5,6 @@ cluster:
 settings:
   scaleupnumber: 10
   scaledownnumber: 2
+ratelimiter:
+  ratelimit: 20
+  ratewindow: 10
