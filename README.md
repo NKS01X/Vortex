@@ -8,13 +8,14 @@
   [![Go Version](https://img.shields.io/badge/Go-1.20+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
   [![Gin Framework](https://img.shields.io/badge/Gin-Framework-00ADD8?style=for-the-badge)](https://gin-gonic.com/)
   [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=for-the-badge)](http://makeapullrequest.com)
 
   <p align="center">
-    <a href="#features">Features</a> •
-    <a href="#architecture">Architecture</a> •
-    <a href="#getting-started">Getting Started</a> •
-    <a href="#configuration">Configuration</a> •
-    <a href="#dashboard">Dashboard</a>
+    <a href="#-features">Features</a> •
+    <a href="#-architecture">Architecture</a> •
+    <a href="#-getting-started">Getting Started</a> •
+    <a href="#-configuration">Configuration</a> •
+    <a href="#-dashboard-beta">Dashboard</a>
   </p>
 </div>
 
@@ -22,30 +23,31 @@
 
 ## 🚀 Features
 
-- **⚡ Dynamic Auto-Scaling (Demon):** Intelligently spawns or kills backend nodes on the fly depending on the current pool of active connections.
-- **⚖️ Round-Robin Load Balancing:** Efficiently distributes incoming traffic across the matrix of healthy backend servers.
-- **🩺 Automated Health Checks:** Periodically sweeps through nodes to identify failures. Unhealthy nodes are temporarily sidelined until they recover.
-- **⚙️ Configurable DNA:** Tweak the scale-up margins, port domains, and replica caps via a simple declarative `vortex.yaml` config.
-- **📊 Real-time Dashboard:** Built-in dashboard capability to visualize active connections, node health, and request routing seamlessly.
+* **⚡ Dynamic Auto-Scaling:** A background daemon intelligently spawns or terminates backend nodes on the fly based on real-time active connection loads.
+* **⚖️ Algorithmic Load Balancing:** Uses a Round-Robin strategy to efficiently and evenly distribute incoming traffic across the matrix of healthy backend servers.
+* **🩺 Automated Health Checks:** Periodically sweeps through nodes to identify failures. Unhealthy nodes are instantly sidelined and re-introduced only upon recovery.
+* **⚙️ Declarative Configuration:** Easily tweak scale-up margins, port ranges, and replica ceilings via a simple, readable `vortex.yaml` file.
+* **📊 Real-time Dashboard:** A built-in metrics UI to seamlessly visualize active connections, node health, and request routing.
 
 ---
 
 ## 🏗 Architecture
 
 Vortex operates via two primary sub-systems intricately tied together:
-1. **The Load Balancer Engine (`lb.go`)**: Acts as the traffic cop, routing requests and monitoring the pulse (active connections & health) of the current node fleet.
-2. **The Demon (`demon.go`)**: A background watcher process that scales the node fleet based on thresholds hit by the active connection count.
+
+1. **The Load Balancer Engine (`lb.go`)**: Acts as the traffic cop. It routes incoming requests and monitors the pulse of the current node fleet (active connections and health).
+2. **The Daemon (`demon.go`)**: A background watcher process that handles the horizontal scaling of the node fleet based on connection thresholds.
 
 ```mermaid
 graph TD
-    Client((Client)) -->|HTTP Request| LB Engine[Vortex Load Balancer :8000]
+    Client((Client)) -->|HTTP Request| LB_Engine[Vortex Load Balancer :8000]
     
     subgraph Vortex Cluster
-        LB Engine -->|Round Robin| Node1[Backend Node 1 :3000\nHealthy]
-        LB Engine -->|Round Robin| Node2[Backend Node 2 :3001\nHealthy]
-        LB Engine -.->|Traffic Halted| Node3[Backend Node 3 :3002\nUnhealthy]
+        LB_Engine -->|Round Robin| Node1[Backend Node 1 :3000\n🟢 Healthy]
+        LB_Engine -->|Round Robin| Node2[Backend Node 2 :3001\n🟢 Healthy]
+        LB_Engine -.->|Traffic Halted| Node3[Backend Node 3 :3002\n🔴 Unhealthy]
         
-        Demon((Demon Process)) -->|Monitors Active Connections| LB Engine
+        Demon((Daemon Process)) -->|Monitors Active Connections| LB_Engine
         Demon -->|Spawns / Kills| Node1
         Demon -->|Spawns / Kills| Node2
         Demon -->|Spawns / Kills| Node3
@@ -55,7 +57,7 @@ graph TD
         HC -->|Periodic Pings| Node3
     end
     
-    style LB Engine fill:#00cfd5,stroke:#fff,stroke-width:2px,color:#000
+    style LB_Engine fill:#00cfd5,stroke:#fff,stroke-width:2px,color:#000
     style Demon fill:#f44336,stroke:#fff,stroke-width:2px,color:#fff
     style HC fill:#4caf50,stroke:#fff,stroke-width:2px,color:#fff
 ```
@@ -71,7 +73,7 @@ graph TD
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/vortex.yaml
+   git clone https://github.com/NKS01X/vortex.yaml
    cd vortex
    ```
 
@@ -159,5 +161,5 @@ Feel free to check out the [issues page](../../issues).
 ---
 
 <div align="center">
-  <sub>Nikhil</sub>
+  <p>Built with ⚡ & ❤️ by <a href="https://github.com/NKS01X"><b>Nikhil</b></a></p>
 </div>
