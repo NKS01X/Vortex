@@ -12,6 +12,7 @@ import (
 	ratelim "vortex/ratelimiter"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -34,10 +35,11 @@ type VortexConfig struct {
 }
 
 var (
-	config        VortexConfig
-	activeServers = make(map[string]*http.Server)
-	InitialPort   int
-	InitialUrl    = "http://127.0.0.1:"
+	config           VortexConfig
+	activeServers    = make(map[string]*http.Server)
+	InitialPort      int
+	InitialUrl       = "http://127.0.0.1:"
+	ActiveNodesGauge prometheus.Gauge
 )
 
 func ParseYamlFile() {
@@ -112,6 +114,10 @@ func AddServers(x int) {
 	}
 	InitialPort += x
 	CurrentServers += uint64(x)
+
+	if ActiveNodesGauge != nil {
+		ActiveNodesGauge.Set(float64(CurrentServers))
+	}
 }
 
 func RemoveServers(x int) {
@@ -130,6 +136,10 @@ func RemoveServers(x int) {
 		fmt.Printf("[daemon] Removed backend from pool: %s\n", Url)
 	}
 	CurrentServers -= uint64(x)
+
+	if ActiveNodesGauge != nil {
+		ActiveNodesGauge.Set(float64(CurrentServers))
+	}
 }
 
 var CurrentServers uint64 = 0
