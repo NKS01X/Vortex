@@ -113,6 +113,8 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
+	r.GET("/dashboard", DashboardHandler)
+
 	r.NoRoute(func(c *gin.Context) {
 		loadbalancer.Load_Balancer(c.Writer, c.Request)
 	})
