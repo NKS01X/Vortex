@@ -61,7 +61,7 @@ func CustomRateLimiter() gin.HandlerFunc {
 	}
 }
 
-func cleanupStaleVisitors() {
+func CleanupStaleVisitors() {
 	for {
 		time.Sleep(1 * time.Minute)
 
