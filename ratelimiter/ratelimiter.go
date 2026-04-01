@@ -38,33 +38,34 @@ func getHashedIp(ip string) uint64 {
 
 func CustomRateLimiter(rateLimit int, rateWindow time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		rateWindow = rateWindow * time.Second
 		ip := c.ClientIP()
 		hashedIp := getHashedIp(ip)
+
 		mu.Lock()
+		defer mu.Unlock()
+
 		v, exists := HashedIpToIpnode[hashedIp]
-		if !exists {
-			HashedIpToIpnode[hashedIp] = &Ipnode{requestcnt: 1, lastResquestTime: time.Now()}
-			mu.Unlock()
+
+		if !exists || time.Since(v.lastResquestTime) > rateWindow {
+			// New visitor OR window expired: Start fresh
+			HashedIpToIpnode[hashedIp] = &Ipnode{
+				requestcnt:       1,
+				lastResquestTime: time.Now(),
+			}
 			c.Next()
 			return
 		}
-		// if time expires
-		if time.Since(v.lastResquestTime) > rateWindow {
-			v.requestcnt = 1
-			v.lastResquestTime = time.Now()
-			mu.Unlock()
-			c.Next()
-			return
-		} else if int(v.requestcnt) >= rateLimit {
-			mu.Unlock()
+
+		// If we reached here, the visitor exists and is within the time window
+		if int(v.requestcnt) >= rateLimit {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
 				"error": "🌀 Vortex Shield: Rate limit exceeded. Back off.",
 			})
 			return
 		}
+
+		// Increment for existing visitor
 		v.requestcnt++
-		mu.Unlock()
 		c.Next()
 	}
 }
