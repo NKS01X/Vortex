@@ -12,8 +12,10 @@ import (
 
 type Server struct {
 	IP      string
+	URL     *url.URL
 	Healthy bool
 	Count   uint64
+	Proxy   *httputil.ReverseProxy
 }
 
 //	var backends = []Server{
@@ -26,24 +28,41 @@ var (
 	mu                sync.RWMutex
 )
 
-func AddBackends(url string) {
+func AddBackends(rawUrl string) {
+	target, err := url.Parse(rawUrl)
+	if err != nil {
+		fmt.Printf("Error parsing backend URL %s: %v\n", rawUrl, err)
+		return
+	}
+
+	proxy := httputil.NewSingleHostReverseProxy(target)
+	proxy.Transport = &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 20,
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
-	backends = append(backends, &Server{IP: url, Healthy: true})
+	backends = append(backends, &Server{
+		IP:      rawUrl,
+		URL:     target,
+		Healthy: true,
+		Proxy:   proxy,
+	})
 }
 
-func RemoveBackends(url string) {
+func RemoveBackends(rawUrl string) {
 	mu.Lock()
 	defer mu.Unlock()
 	for i, server := range backends {
-		if server.IP == url {
+		if server.IP == rawUrl {
 			backends = append(backends[:i], backends[i+1:]...)
 			break
 		}
 	}
 }
 
-func getNextBackend() Server {
+func getNextBackend() *Server {
 	mu.RLock()
 	defer mu.RUnlock()
 
@@ -56,32 +75,27 @@ func getNextBackend() Server {
 
 	sz_of_backend := len(healthy_backends)
 	if sz_of_backend == 0 {
-		return Server{}
+		return &Server{}
 	}
 	next := atomic.AddUint64(&count_request, 1)
 	selected := healthy_backends[(uint64(next)-1)%uint64(sz_of_backend)]
 	atomic.AddUint64(&selected.Count, 1)
-	return *selected
+	return selected
 }
 
 func Load_Balancer(w http.ResponseWriter, r *http.Request) {
 	atomic.AddInt64(&ActiveConnections, 1)
 	defer atomic.AddInt64(&ActiveConnections, -1)
 
-	targetUrl := getNextBackend()
-	if targetUrl.IP == "" {
+	targetServer := getNextBackend()
+	if targetServer.IP == "" {
 		http.Error(w, "No backends available", http.StatusServiceUnavailable)
 		return
 	}
-	fmt.Printf("Routing the reponse to = %s\n", targetUrl.IP)
-	target, err := url.Parse(targetUrl.IP)
-	if err != nil {
-		http.Error(w, "Server Error", http.StatusInternalServerError)
-		return
-	}
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	r.Host = target.Host
-	proxy.ServeHTTP(w, r)
+	fmt.Printf("Routing the reponse to = %s\n", targetServer.IP)
+
+	r.Host = targetServer.URL.Host
+	targetServer.Proxy.ServeHTTP(w, r)
 }
 
 func GetStatusData() (int64, []*Server) {
@@ -111,13 +125,13 @@ func check_health(server *Server) {
 	mu.Lock()
 	defer mu.Unlock()
 
-	if err != nil || resp.StatusCode >= 500 {
+	if err != nil || resp == nil || resp.StatusCode >= 500 {
 		server.Healthy = false
 	} else {
 		server.Healthy = true
 	}
 
-	if resp != nil {
+	if resp != nil && resp.Body != nil {
 		resp.Body.Close()
 	}
 }

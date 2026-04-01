@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -36,6 +37,7 @@ type VortexConfig struct {
 var (
 	config           VortexConfig
 	activeServers    = make(map[string]*http.Server)
+	serverMu         sync.Mutex
 	InitialPort      int
 	InitialUrl       = "http://127.0.0.1:"
 	ActiveNodesGauge prometheus.Gauge
@@ -91,7 +93,7 @@ func StartServer(port int, url string) {
 	// r.Use(ratelim.CustomRateLimiter(config.RateLimiter.RateLimit, config.RateLimiter.RateWindow))
 	r.GET("/", func(c *gin.Context) {
 		// for test
-		time.Sleep(2 * time.Second)
+		time.Sleep(200 * time.Second)
 		c.String(200, "🌀 Vortex Node spinning on Port: %d\n", port)
 	})
 
@@ -99,9 +101,9 @@ func StartServer(port int, url string) {
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: r,
 	}
-
+	serverMu.Lock()
 	activeServers[url] = srv
-
+	serverMu.Unlock()
 	fmt.Printf("[Backend] Server started on port %d\n", port)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		fmt.Printf("[Backend] Server error on port %d: %v\n", port, err)
@@ -129,7 +131,14 @@ func RemoveServers(x int) {
 		Url := fmt.Sprintf("%s%d", InitialUrl, InitialPort)
 		DeleteServer(Url)
 
-		if srv, exists := activeServers[Url]; exists {
+		serverMu.Lock()
+		srv, exists := activeServers[Url]
+		if exists {
+			delete(activeServers, Url)
+		}
+		serverMu.Unlock()
+
+		if exists {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			srv.Shutdown(ctx)
