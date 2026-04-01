@@ -28,6 +28,7 @@
 * **🩺 Automated Health Checks:** Periodically sweeps through nodes to identify failures. Unhealthy nodes are instantly sidelined and re-introduced only upon recovery.
 * **⚙️ Declarative Configuration:** Easily tweak scale-up margins, port ranges, and replica ceilings via a simple, readable `vortex.yaml` file.
 * **📊 Real-time Dashboard:** A built-in metrics UI to seamlessly visualize active connections, node health, and request routing.
+* **📈 Enterprise Observability:** Integrated Prometheus metric scraping Endpoint and complete Grafana telemetry stack out-of-the-box.
 
 ---
 
@@ -90,11 +91,20 @@ graph TD
    ```
    > You will see the Load Balancer spinning up on port `:8000` and backend nodes starting sequentially from `:3000` (or as configured).
 
-### Production Ready (Docker)
+### Production Ready (Docker & Observability)
 
-To make Vortex production-ready, it comes with a `Dockerfile` and a `Makefile` to seamlessly build into an isolated container.
+To make Vortex production-ready, it comes with a `Dockerfile` and a `docker-compose.yml` to seamlessly orchestrate the load balancer into an isolated network alongside Prometheus and Grafana.
 
-Build and run in one step using **Make**:
+**Spin up the entire stack seamlessly** using Docker Compose:
+```bash
+docker compose up -d --build
+```
+This automatically boots up:
+* **Vortex Load Balancer**: `http://localhost:8000`
+* **Grafana Web UI**: `http://localhost:3000`
+* **Prometheus Metrics**: `http://localhost:9090`
+
+Alternatively, build and run just the standalone load balancer using **Make**:
 ```bash
 make docker-run
 ```
