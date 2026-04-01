@@ -101,7 +101,7 @@ docker compose up -d --build
 ```
 This automatically boots up:
 * **Vortex Load Balancer**: `http://localhost:8000`
-* **Grafana Web UI**: `http://localhost:3000`
+* **Grafana Web UI**: `http://localhost:3000` *(Pre-loaded with the **Vortex Overview** dashboard)*
 * **Prometheus Metrics**: `http://localhost:9090`
 
 Alternatively, build and run just the standalone load balancer using **Make**:
@@ -154,6 +154,12 @@ Vortex comes natively equipped with a built-in dashboard handler mechanism in `m
 * List of **Backend Nodes** IPs & Ports
 * **Health Status** (Online/Offline)
 * **Total Requests Handled** per Node
+
+### 📈 Grafana Analytics
+In addition to the native built-in dashboard, running the project via `docker compose` spins up a fully provisioned Grafana instance. The **Vortex Overview** Grafana Dashboard is configured out-of-the-box and automatically loaded, providing extensive metric visualizations for:
+* **Traffic Throughput (RPS)**
+* **Error Rates (5xx)**
+* **Active Cluster Size**
 
 ---
 
