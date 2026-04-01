@@ -9,7 +9,6 @@ import (
 	"time"
 
 	lb "vortex/loadbalancer"
-	ratelim "vortex/ratelimiter"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
@@ -67,6 +66,10 @@ func ParseYamlFile() {
 //     ServerConfig = config
 // }
 
+func GetConfig() VortexConfig {
+	return config
+}
+
 /*
  * @params = amount of server to spin up
  */
@@ -80,12 +83,12 @@ func DeleteServer(Url string) {
 
 func StartServer(port int, url string) {
 	gin.SetMode(gin.ReleaseMode)
-	go ratelim.CleanupStaleVisitors() // cleans the users from the map who's time window has expired
+	// go ratelim.CleanupStaleVisitors() // cleans the users from the map who's time window has expired
 	r := gin.New()
 	/*
 	 * fetched RateLimit and RateWindow from yaml
 	 */
-	r.Use(ratelim.CustomRateLimiter(config.RateLimiter.RateLimit, config.RateLimiter.RateWindow))
+	// r.Use(ratelim.CustomRateLimiter(config.RateLimiter.RateLimit, config.RateLimiter.RateWindow))
 	r.GET("/", func(c *gin.Context) {
 		// for test
 		time.Sleep(2 * time.Second)
