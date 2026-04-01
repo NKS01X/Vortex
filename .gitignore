@@ -24,3 +24,5 @@ go.work.sum
 
 # MacOS folders
 .DS_Store
+
+/tmp

@@ -48,7 +48,7 @@ flowchart TD
     RL -->|Allowed| Eng(Load Balancer Engine)
     RL -->|Blocked| Block([429 Too Many Requests])
     
-    subgraph Vortex Clusterস্থল
+    subgraph Vortex Cluster
         Eng --> Node1[Backend Node 1]
         Eng --> Node2[Backend Node 2]
         Eng --> NodeN[Backend Node N]
@@ -59,11 +59,11 @@ flowchart TD
         HC[[Health Checker]]
     end
 
-    SD -.->|Auto-Scale| Vortex Clusterস্থল
-    HC -.->|Monitor/Evict| Vortex Clusterস্থল
+    SD -.->|Auto-Scale| Vortex Cluster
+    HC -.->|Monitor/Evict| Vortex Cluster
     
     %% Observability
-    Vortex Clusterস্থল -.-> Prom[(Prometheus)]
+    Vortex Cluster -.-> Prom[(Prometheus)]
     Prom --> Graf[Grafana Dashboard]
 
     %% Apply Classes
@@ -108,17 +108,23 @@ cd vortex
 go run main.go
 ```
 
-### 🐳 Production Stack
+### 🐳 Docker & Observability Stack
 
-For a complete deployment with observability, deploy Vortex using **Docker Compose**:
+Vortex comes with a fully containerized observability stack using **Prometheus** and **Grafana**, and supports hot-reloading using **Air**.
 
 ```bash
-# Build and run in detached mode
-docker compose up -d --build
+# Standard Start (Production build)
+make up
+
+# Development Start (Hot-reloading with Air)
+make dev
+
+# Rebuild and Start (Clean standard build)
+make rebuild
 ```
 
 **Expected Ports:**
-- **Load Balancer**: `8080`
+- **Load Balancer**: `8000`
 - **Grafana**: `3000` (Default login: `admin`/`admin`)
 - **Prometheus**: `9090`
 
