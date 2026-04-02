@@ -8,7 +8,30 @@ import (
 	"vortex/loadbalancer"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+var (
+	VortexRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "vortex_requests_total",
+			Help: "Total number of requests handled by Vortex.",
+		},
+		[]string{"method", "status"},
+	)
+	VortexActiveNodes = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "vortex_active_nodes",
+			Help: "Current number of active backend nodes.",
+		},
+	)
+)
+
+func init() {
+	prometheus.MustRegister(VortexRequestsTotal)
+	prometheus.MustRegister(VortexActiveNodes)
+}
 
 // func test() {
 //     fmt.Println("========================================")
@@ -104,7 +127,18 @@ func DashboardHandler(c *gin.Context) {
 	})
 }
 
+func metricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+		status := fmt.Sprintf("%d", c.Writer.Status())
+		method := c.Request.Method
+		VortexRequestsTotal.WithLabelValues(method, status).Inc()
+	}
+}
+
 func main() {
+	daemon.ActiveNodesGauge = VortexActiveNodes
+
 	// test()
 	daemon.ParseYamlFile()
 
@@ -112,6 +146,10 @@ func main() {
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
+
+	r.Use(metricsMiddleware())
+
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	r.GET("/dashboard", DashboardHandler)
 
