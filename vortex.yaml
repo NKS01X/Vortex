@@ -8,5 +8,5 @@ settings:
   scale_up_grace_period: 10s
   scale_down_cooldown: 15s
 ratelimiter:
-  ratelimit: 20
-  ratewindow: 10
+  ratelimit: 5
+  ratewindow: 15s
