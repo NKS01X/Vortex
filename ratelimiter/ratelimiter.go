@@ -18,9 +18,16 @@ type Ipnode struct {
 var (
 	HashedIpToIpnode = make(map[uint64]*Ipnode)
 	mu               sync.Mutex
+	/*
+	*
+	*	passed as a parameter in CustomRateLimiter
+	*
+	 */
 	// fetch the below 2 from yaml file
-	rateLimit  = 20
-	rateWindow = 10 * time.Second
+	// rateLimit  = 20
+	// rateWindow = 10 * time.Second
+	//
+	//
 )
 
 func getHashedIp(ip string) uint64 {
@@ -29,8 +36,9 @@ func getHashedIp(ip string) uint64 {
 	return h.Sum64()
 }
 
-func CustomRateLimiter() gin.HandlerFunc {
+func CustomRateLimiter(rateLimit int, rateWindow time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		rateWindow = rateWindow * time.Second
 		ip := c.ClientIP()
 		hashedIp := getHashedIp(ip)
 		mu.Lock()
