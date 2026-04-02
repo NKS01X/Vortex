@@ -5,6 +5,8 @@ cluster:
 settings:
   scaleupnumber: 10
   scaledownnumber: 2
+  scale_up_grace_period: 10s
+  scale_down_cooldown: 15s
 ratelimiter:
   ratelimit: 20
   ratewindow: 10

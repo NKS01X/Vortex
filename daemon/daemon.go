@@ -22,8 +22,10 @@ type VortexConfig struct {
 		StartingPort int `yaml:"starting_port"`
 	} `yaml:"cluster"`
 	Settings struct {
-		Scaleupnumber   int `yaml:"scaleupnumber"`
-		Scaledownnumber int `yaml:"scaledownnumber"`
+		Scaleupnumber      int           `yaml:"scaleupnumber"`
+		Scaledownnumber    int           `yaml:"scaledownnumber"`
+		ScaleUpGracePeriod time.Duration `yaml:"scale_up_grace_period"`
+		ScaleDownCooldown  time.Duration `yaml:"scale_down_cooldown"`
 	} `yaml:"settings"`
 	RateLimiter struct {
 		RateLimit  int           `yaml:"ratelimit"`
@@ -133,19 +135,38 @@ func RemoveServers(x int) {
 var CurrentServers uint64 = 0
 
 func Daemon() {
-	for {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	var scaleUpTriggerTime time.Time
+	var lastScaleDownTime time.Time
+
+	for range ticker.C {
 		activeReqs := atomic.LoadInt64(&lb.ActiveConnections)
 
+		// Scale UP logic
 		if uint64(activeReqs) >= uint64(config.Settings.Scaleupnumber) {
-			if CurrentServers < uint64(config.Cluster.MaxReplicas) {
-				AddServers(1)
+			if scaleUpTriggerTime.IsZero() {
+				scaleUpTriggerTime = time.Now()
+			} else if time.Since(scaleUpTriggerTime) >= config.Settings.ScaleUpGracePeriod {
+				if CurrentServers < uint64(config.Cluster.MaxReplicas) {
+					AddServers(1)
+				}
+				// Reset gracefully to prevent thrashing
+				scaleUpTriggerTime = time.Time{}
 			}
-		} else if uint64(activeReqs) <= uint64(config.Settings.Scaledownnumber) {
-			// RemoveServers(1)
-			if CurrentServers > uint64(config.Cluster.MinReplicas) {
-				RemoveServers(1)
+		} else {
+			scaleUpTriggerTime = time.Time{}
+		}
+
+		// Scale DOWN logic
+		if uint64(activeReqs) <= uint64(config.Settings.Scaledownnumber) {
+			if time.Since(lastScaleDownTime) >= config.Settings.ScaleDownCooldown {
+				if CurrentServers > uint64(config.Cluster.MinReplicas) {
+					RemoveServers(1)
+					lastScaleDownTime = time.Now()
+				}
 			}
 		}
-		time.Sleep(2 * time.Second)
 	}
 }
