@@ -24,7 +24,7 @@ clean:
 
 docker-build:
 	@echo "Building Docker image..."
-	docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
+	docker build --target prod -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 
 docker-run: docker-build
 	@echo "Running Vortex in standalone Docker container..."
@@ -33,8 +33,16 @@ docker-run: docker-build
 ## OBSERVABILITY CLUSTER TARGETS ##
 
 up:
-	@echo "Spinning up Vortex Cluster with Prometheus and Grafana..."
-	docker compose up -d --build
+	@echo "Spinning up Vortex Cluster (Standard Start)..."
+	TARGET=prod docker compose up -d
+
+dev:
+	@echo "Spinning up Vortex Cluster for Development (Hot-Reloading with Air)..."
+	TARGET=dev docker compose up -d --build
+
+rebuild:
+	@echo "Rebuilding and starting Vortex Cluster..."
+	TARGET=prod docker compose up -d --build
 
 down:
 	@echo "Tearing down the Vortex Cluster..."
