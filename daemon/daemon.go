@@ -9,6 +9,7 @@ import (
 	"time"
 
 	lb "vortex/loadbalancer"
+	ratelim "vortex/ratelimiter"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
@@ -71,7 +72,9 @@ func DeleteServer(Url string) {
 
 func StartServer(port int, url string) {
 	gin.SetMode(gin.ReleaseMode)
+	go ratelim.CleanupStaleVisitors() // cleans the users from the map who's time window has expired
 	r := gin.New()
+	r.Use(ratelim.CustomRateLimiter())
 	r.GET("/", func(c *gin.Context) {
 		// for test
 		time.Sleep(2 * time.Second)
