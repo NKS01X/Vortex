@@ -6,6 +6,7 @@ import (
 
 	"vortex/daemon"
 	"vortex/loadbalancer"
+	ratelim "vortex/ratelimiter"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
@@ -148,7 +149,8 @@ func main() {
 	r := gin.Default()
 
 	r.Use(metricsMiddleware())
-
+	cfg := daemon.GetConfig()
+	r.Use(ratelim.CustomRateLimiter(cfg.RateLimiter.RateLimit, cfg.RateLimiter.RateWindow))
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	r.GET("/dashboard", DashboardHandler)
@@ -156,7 +158,7 @@ func main() {
 	r.NoRoute(func(c *gin.Context) {
 		loadbalancer.Load_Balancer(c.Writer, c.Request)
 	})
-
+	go ratelim.CleanupStaleVisitors()
 	fmt.Println("\n Vortex Load Balancer is live on :8000")
 	fmt.Println("========================================")
 
