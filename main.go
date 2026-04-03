@@ -147,13 +147,11 @@ func main() {
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
-
+	r.GET("/dashboard", DashboardHandler)
 	r.Use(metricsMiddleware())
 	cfg := daemon.GetConfig()
 	r.Use(ratelim.CustomRateLimiter(cfg.RateLimiter.RateLimit, cfg.RateLimiter.RateWindow))
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
-	r.GET("/dashboard", DashboardHandler)
 
 	r.NoRoute(func(c *gin.Context) {
 		loadbalancer.Load_Balancer(c.Writer, c.Request)
