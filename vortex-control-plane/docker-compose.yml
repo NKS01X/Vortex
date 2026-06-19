@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  kind-db:
+    image: nks01x/kind-db:latest
+    container_name: kind-db
+    ports:
+      - "50051:50051"
+    volumes:
+      - kind-data:/app/data
+      - ./schema.ksl:/app/data/schema.ksl
+    restart: unless-stopped
+
+volumes:
+  kind-data:

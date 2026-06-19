@@ -68,8 +68,6 @@ func (m *VortexManager) runHealthCheckCycle(ctx context.Context, db RouterUpdate
 		app.Containers = healthyContainers
 
 		// Push updates to Kind DB
-		if len(healthyIPs) > 0 {
-			_ = db.UpdateRoutingTable(ctx, clientID, healthyIPs)
-		}
+		_ = db.UpdateRoutingTable(ctx, clientID, healthyIPs)
 	}
 }
