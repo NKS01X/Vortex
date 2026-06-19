@@ -13,6 +13,11 @@
 
 ---
 
+## Architecture
+![Architecture](docs/Vortex-engine-arch.png)
+
+---
+
 ## 🌌 Overview
 
 **Vortex** is a robust, dynamic reverse proxy, rate limiter, and cluster manager built entirely in **Go**. Engineered to handle fluctuating traffic seamlessly, Vortex dynamically spawns or terminates backend nodes based on real-time traffic thresholds. By leveraging the **Gin** framework and **yaml.v3** for declarative configuration, Vortex provides an enterprise-grade load balancing solution that is highly configurable, inherently resilient, and fully observable out of the box.
@@ -34,47 +39,6 @@
 
 The Vortex architecture routes incoming requests through a robust chain of limiters and balancers, while a background daemon continuously monitors health and scales the cluster up or down based on load.
 
-```mermaid
-flowchart TD
-    %% Custom Colors and Styling
-    classDef client fill:#f9f9f9,stroke:#333,stroke-width:2px;
-    classDef proxy fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
-    classDef backend fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
-    classDef daemon fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
-    classDef monitor fill:#fce4ec,stroke:#c2185b,stroke-width:2px;
-
-    Client([Client Requests]) -->|HTTP/HTTPS| RL{Rate Limiter}
-    
-    RL -->|Allowed| Eng(Load Balancer Engine)
-    RL -->|Blocked| Block([429 Too Many Requests])
-    
-    subgraph Vortex Cluster
-        Eng --> Node1[Backend Node 1]
-        Eng --> Node2[Backend Node 2]
-        Eng --> NodeN[Backend Node N]
-    end
-
-    subgraph Background Daemons
-        SD[[Scaling Daemon]]
-        HC[[Health Checker]]
-    end
-
-    SD -.->|Auto-Scale| Vortex Cluster
-    HC -.->|Monitor/Evict| Vortex Cluster
-    
-    %% Observability
-    Vortex Cluster -.-> Prom[(Prometheus)]
-    Prom --> Graf[Grafana Dashboard]
-
-    %% Apply Classes
-    class Client client;
-    class RL,Eng proxy;
-    class Node1,Node2,NodeN backend;
-    class SD,HC daemon;
-    class Prom,Graf monitor;
-```
-
----
 
 ## 📂 Project Structure
 
