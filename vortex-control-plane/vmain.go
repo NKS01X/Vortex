@@ -65,12 +65,41 @@ func main() {
 
 	//Test the deploy logic
 	fmt.Println("\n--- Initiating Vortex Deploy ---")
-	repo := "https://github.com/docker-library/hello-world.git#master:amd64/hello-world"
+	repo := "https://github.com/crccheck/docker-hello-world.git"
 
 	err = manager.Scale(ctx, "user_8x9a2", repo, 2)
 	if err != nil {
 		fmt.Println("Deploy Error:", err)
 	}
+
+	// var turn = 0
+	// for i := 0; i < 10; i++ {
+	// 	if turn == 0 {
+	// 		err = manager.Scale(ctx, "user_8x9a2", repo, 2)
+	// 		turn ^= 1
+	// 	} else {
+	// 		err = manager.Scale(ctx, "user_8x9a2", repo, 0)
+	// 		turn ^= 1
+	// 	}
+	// 	val, err := kindDB.client.Get(ctx, "router:user_8x9a2")
+	// 	if err != nil {
+	// 		fmt.Println("Deploy Error:", err)
+	// 		time.Sleep(10 * time.Second)
+	// 		continue
+	// 	}
+	// 	if val == nil {
+	// 		fmt.Println("Data in DB: []")
+	// 		time.Sleep(10 * time.Second)
+	// 		continue
+	// 	}
+	// 	var data struct {
+	// 		ClientID string   `json:"client_id"`
+	// 		IPs      []string `json:"ips"`
+	// 	}
+	// 	json.Unmarshal(val.Value, &data)
+	// 	fmt.Printf("Data in DB: %+v\n", data.IPs)
+	// 	time.Sleep(10 * time.Second)
+	// }
 
 	fmt.Println("\nManager is running. You can test self-healing by killing a container via 'docker kill <id>' in another terminal.")
 

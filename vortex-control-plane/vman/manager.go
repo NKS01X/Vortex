@@ -93,7 +93,7 @@ func (m *VortexManager) Scale(ctx context.Context, clientID, repoLink string, ta
 
 	//scaling down
 	if currentReplicas > targetReplicas {
-		diff := currentReplicas - targetReplicas
+		diff := min(currentReplicas, currentReplicas-targetReplicas)
 		fmt.Printf("Scaling DOWN %s by %d containers\n", clientID, diff)
 		for i := 0; i < diff; i++ {
 			lastIdx := len(app.Containers) - 1

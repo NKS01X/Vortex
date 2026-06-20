@@ -8,7 +8,7 @@ services:
       - "50051:50051"
     volumes:
       - kind-data:/app/data
-      - ./schema.ksl:/app/data/schema.ksl
+      - ../schema/schema.ksl:/app/data/schema.ksl
     restart: unless-stopped
 
 volumes:
