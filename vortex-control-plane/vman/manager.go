@@ -12,9 +12,10 @@ import (
 	"github.com/docker/docker/client"
 )
 
-// RouterUpdater is an interface that allows vman to talk to KindDB
-type RouterUpdater interface {
-	UpdateRoutingTable(ctx context.Context, clientID string, ips []string) error
+// DatabaseClient defines the subset of Kind DB operations used by vman
+type DatabaseClient interface {
+	Put(ctx context.Context, key string, value []byte) (bool, error)
+	Delete(ctx context.Context, key string) (bool, error)
 }
 
 // ClientApp holds the desired state for a specific user's deployment
@@ -26,9 +27,10 @@ type ClientApp struct {
 
 // VortexManager encapsulates the Docker client and the state of all apps
 type VortexManager struct {
-	docker *client.Client
-	apps   map[string]*ClientApp
-	mu     sync.RWMutex
+	docker        *client.Client
+	apps          map[string]*ClientApp
+	mu            sync.RWMutex
+	InFlightLocks sync.Map
 }
 
 func NewVortexManager() (*VortexManager, error) {
@@ -37,10 +39,29 @@ func NewVortexManager() (*VortexManager, error) {
 		return nil, fmt.Errorf("failed to init docker client: %w", err)
 	}
 
-	return &VortexManager{
+	manager := &VortexManager{
 		docker: cli,
 		apps:   make(map[string]*ClientApp),
-	}, nil
+	}
+
+	// Recover state from existing containers
+	containers, err := cli.ContainerList(context.Background(), container.ListOptions{All: true})
+	if err == nil {
+		for _, c := range containers {
+			clientID, hasClient := c.Labels["vortex.client_id"]
+			repoLink, hasRepo := c.Labels["vortex.repo_link"]
+			if hasClient && hasRepo {
+				app, exists := manager.apps[clientID]
+				if !exists {
+					app = &ClientApp{ClientID: clientID, RepoLink: repoLink, Containers: []string{}}
+					manager.apps[clientID] = app
+				}
+				app.Containers = append(app.Containers, c.ID)
+			}
+		}
+	}
+
+	return manager, nil
 }
 
 func (m *VortexManager) CreateContainer(ctx context.Context, repoLink, clientID string) (string, error) {
@@ -58,6 +79,10 @@ func (m *VortexManager) CreateContainer(ctx context.Context, repoLink, clientID 
 
 	createResp, err := m.docker.ContainerCreate(ctx, &container.Config{
 		Image: imageTag,
+		Labels: map[string]string{
+			"vortex.client_id": clientID,
+			"vortex.repo_link": repoLink,
+		},
 	}, nil, nil, nil, "")
 	if err != nil {
 		return "", err
@@ -100,9 +125,7 @@ func (m *VortexManager) Scale(ctx context.Context, clientID, repoLink string, ta
 			_ = m.DeleteContainer(ctx, app.Containers[lastIdx])
 			app.Containers = app.Containers[:lastIdx]
 		}
-	}
-	//scaling up
-	if currentReplicas < targetReplicas {
+	} else if currentReplicas < targetReplicas {
 		diff := targetReplicas - currentReplicas
 		fmt.Printf("Scaling UP %s by %d containers\n", clientID, diff)
 		for i := 0; i < diff; i++ {

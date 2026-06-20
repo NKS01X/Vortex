@@ -1,5 +1,17 @@
-@prefix("router")
-type RoutingTable {
+enum ContainerStatus { Running, Dead, Provisioning }
+
+@prefix("vortex:container")
+type ContainerRecord {
+    id: String,
     @indexed client_id: String,
-    ips: [String]
+    @indexed status: ContainerStatus,
+    ip_address: String,
+    repo_link: String
+}
+
+@prefix("vortex:metrics")
+type ClientMetrics {
+    client_id: String,
+    current_rps: U32,
+    desired_replicas: U32
 }

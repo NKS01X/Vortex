@@ -5,10 +5,17 @@ import (
 	"control-plane/vman"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"strings"
 
 	kindclient "github.com/NKS01X/Kind/go-client"
 )
+
+type ScaleJob struct {
+	ClientID string `json:"client_id"`
+	Target   int    `json:"target"`
+}
 
 // KindClient implements the vman.RouterUpdater interface
 type KindClient struct {
@@ -23,86 +30,76 @@ func NewKindClient(addr string) (*KindClient, error) {
 	return &KindClient{client: c}, nil
 }
 
-// UpdateRoutingTable updates the routing table in Kind DB
-func (k *KindClient) UpdateRoutingTable(ctx context.Context, clientID string, ips []string) error {
-	fmt.Printf("[KIND DB SYNC] Routing updated for %s -> IPs: %v\n", clientID, ips)
+// Put inserts a key-value pair to Kind DB
+func (k *KindClient) Put(ctx context.Context, key string, value []byte) (bool, error) {
+	return k.client.Put(ctx, key, value)
+}
 
-	val, err := json.Marshal(map[string]interface{}{
-		"client_id": clientID,
-		"ips":       ips,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to marshal ips: %w", err)
-	}
-
-	_, err = k.client.Put(ctx, "router:"+clientID, val)
-	if err != nil {
-		return fmt.Errorf("failed to sync to kind db: %w", err)
-	}
-	return nil
+// Delete removes a key from Kind DB
+func (k *KindClient) Delete(ctx context.Context, key string) (bool, error) {
+	_, err := k.client.Delete(ctx, key)
+	return err == nil, err
 }
 
 func main() {
 	ctx := context.Background()
 
-	//Kinddb
-	kindDB, err := NewKindClient("localhost:50051")
+	kindWrapper, err := NewKindClient("localhost:50051")
 	if err != nil {
 		fmt.Printf("Failed to connect to Kind DB: %v\n", err)
 		os.Exit(1)
 	}
-	defer kindDB.client.Close()
+	defer kindWrapper.client.Close()
 
-	//VortexManager
+	kindDB := kindWrapper.client
+
 	manager, err := vman.NewVortexManager()
 	if err != nil {
 		fmt.Println("Critical Start Error:", err)
 		os.Exit(1)
 	}
 
-	//health checks
-	manager.StartHealthMonitor(ctx, kindDB)
+	manager.StartHealthMonitor(ctx, kindWrapper)
 
-	//Test the deploy logic
-	fmt.Println("\n--- Initiating Vortex Deploy ---")
-	repo := "https://github.com/crccheck/docker-hello-world.git"
+	fmt.Println("Manager is running. You can test self-healing by killing a container via 'docker kill <id>' in another terminal.")
 
-	err = manager.Scale(ctx, "user_8x9a2", repo, 2)
+	events, err := kindDB.Watch(ctx, "vortex:queue:scale:")
 	if err != nil {
-		fmt.Println("Deploy Error:", err)
+		log.Fatalf("Failed to watch queue: %v", err)
 	}
 
-	// var turn = 0
-	// for i := 0; i < 10; i++ {
-	// 	if turn == 0 {
-	// 		err = manager.Scale(ctx, "user_8x9a2", repo, 2)
-	// 		turn ^= 1
-	// 	} else {
-	// 		err = manager.Scale(ctx, "user_8x9a2", repo, 0)
-	// 		turn ^= 1
-	// 	}
-	// 	val, err := kindDB.client.Get(ctx, "router:user_8x9a2")
-	// 	if err != nil {
-	// 		fmt.Println("Deploy Error:", err)
-	// 		time.Sleep(10 * time.Second)
-	// 		continue
-	// 	}
-	// 	if val == nil {
-	// 		fmt.Println("Data in DB: []")
-	// 		time.Sleep(10 * time.Second)
-	// 		continue
-	// 	}
-	// 	var data struct {
-	// 		ClientID string   `json:"client_id"`
-	// 		IPs      []string `json:"ips"`
-	// 	}
-	// 	json.Unmarshal(val.Value, &data)
-	// 	fmt.Printf("Data in DB: %+v\n", data.IPs)
-	// 	time.Sleep(10 * time.Second)
-	// }
+	repo := "https://github.com/crccheck/docker-hello-world.git"
 
-	fmt.Println("\nManager is running. You can test self-healing by killing a container via 'docker kill <id>' in another terminal.")
+	for {
+		event, err := events.Recv()
+		if err != nil {
+			log.Printf("Watch error or closed: %v", err)
+			break
+		}
 
-	//blocking for keeping go routines alive
-	select {}
+		if event.OperationType == "PUT" {
+			var job ScaleJob
+			if err := json.Unmarshal(event.NewValue, &job); err != nil {
+				log.Printf("Failed to parse ScaleJob: %v", err)
+				continue
+			}
+
+			// Parse client_id from key if needed
+			keyParts := strings.Split(event.Key, ":")
+			clientID := keyParts[len(keyParts)-1]
+
+			if job.ClientID == "" {
+				job.ClientID = clientID
+			}
+
+			log.Printf("Processing ScaleJob client=%s target=%d", job.ClientID, job.Target)
+
+			err := manager.Scale(ctx, job.ClientID, repo, job.Target)
+			if err != nil {
+				log.Printf("Scale Error: %v", err)
+			} else {
+				log.Printf("ScaleJob ACK \u2713 %s scaled to %d", job.ClientID, job.Target)
+			}
+		}
+	}
 }

@@ -26,3 +26,10 @@ go.work.sum
 .DS_Store
 
 /tmp
+/vortex-control-plane/kind-db-context.md
+/vortex-control-plane/vortex_logs.txt
+
+#temp bin files
+*_bin
+
+/tests/e2e/logs

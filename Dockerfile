@@ -8,7 +8,7 @@ RUN go mod download
 
 # Build the binary
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o vortex .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o vortex ./daemon/daemon.go
 
 # Stage 2: Development (Hot-Reloading with Air)
 FROM golang:alpine AS dev
